@@ -6,11 +6,13 @@ import user_config
 import datetime
 import logging
 import time
+import hashlib
 from collections import namedtuple
 from typing import Any, Callable, Dict, List, NewType, Optional
 from galaxy.api.consts import LicenseType, LocalGameState, Platform
 from galaxy.api.plugin import Plugin, create_and_run_plugin
-from galaxy.api.types import Achievement, Authentication, Game, LicenseInfo, LocalGame, GameTime
+from galaxy.api.types import Authentication, NextStep, Game, LicenseInfo, LocalGame, GameTime, Achievement
+from retroachievements_client import RetroachievementsClient
 
 from version import __version__ as version
 
@@ -22,6 +24,12 @@ class Retroarch(Plugin):
         self.playlist_path = user_config.emu_path + "playlists/Nintendo - Nintendo Entertainment System.lpl"
         self.proc = None
         self.game_run = ""
+        if user_config.ra_user and user_config.ra_api_key:
+            self.ra_client = RetroachievementsClient(user_config.ra_user, user_config.ra_api_key)
+        else:
+            logging.info('RetroAchievements user and API key are not provided')
+            self.ra_client = None
+
 
     async def authenticate(self, stored_credentials=None):
         creds = {}
@@ -141,6 +149,32 @@ class Retroarch(Plugin):
 
         self.update_game_cache()
         self.get_local_games()
+
+    async def get_unlocked_achievements(self, game_id: str, context: Any) -> List[Achievement]:
+        if self.ra_client:
+            ra_id = await self._get_retroachievement_game_id(game_id)
+            logging.debug('Got retroachievements id %s', ra_id)
+            if ra_id:
+                return await self.ra_client.get_earned_achievements(ra_id)
+
+        return []
+
+    async def _get_retroachievement_game_id(self, game_id: str):
+        if os.path.isfile(self.playlist_path):
+            with open(self.playlist_path) as playlist_json:
+                playlist_dict = json.load(playlist_json)
+
+            for rom in playlist_dict["items"]:
+                if game_id == self.format_game(rom["label"]):
+                    rom_path = rom["path"]
+                    if os.path.isfile(rom_path):
+                        hash_md5 = hashlib.md5()
+                        with open(rom_path, "rb") as f:
+                            f.read(0x10)
+                            hash_md5.update(f.read())
+                        return hash_md5.hexdigest()
+        return None
+
 
 def main():
     create_and_run_plugin(Retroarch, sys.argv)

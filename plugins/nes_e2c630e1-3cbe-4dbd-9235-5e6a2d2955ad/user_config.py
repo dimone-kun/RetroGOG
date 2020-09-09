@@ -9,3 +9,13 @@ emu_path = ""
 # core = "mesen_libretro.dll"
 
 core = ""
+
+# Enter your RetroAchievemnts user name
+
+ra_user = None
+
+# Enter your RetroAchievements API key here
+# You can find it in your profile settings page:
+# https://retroachievements.org/controlpanel.php
+
+ra_api_key = None
