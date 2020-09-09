@@ -152,14 +152,17 @@ class Retroarch(Plugin):
 
     async def get_unlocked_achievements(self, game_id: str, context: Any) -> List[Achievement]:
         if self.ra_client:
-            ra_id = await self._get_retroachievement_game_id(game_id)
-            logging.debug('Got retroachievements id %s', ra_id)
+            rom_hash = self._rom_hash(game_id)
+            ra_id = await self.ra_client.get_id_by_hash(rom_hash)
+
             if ra_id:
-                return await self.ra_client.get_earned_achievements(ra_id)
+                logging.debug('Got retroachievements id %s', ra_id)
+                if ra_id:
+                    return await self.ra_client.get_earned_achievements(ra_id)
 
         return []
 
-    async def _get_retroachievement_game_id(self, game_id: str):
+    def _rom_hash(self, game_id: str):
         if os.path.isfile(self.playlist_path):
             with open(self.playlist_path) as playlist_json:
                 playlist_dict = json.load(playlist_json)

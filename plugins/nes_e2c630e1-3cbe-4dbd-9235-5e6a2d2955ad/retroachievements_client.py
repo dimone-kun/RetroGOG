@@ -1,9 +1,12 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 
 from typing import List
 from galaxy.http import handle_exception, create_client_session
 from galaxy.api.types import Achievement
+
+RA_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 class RetroachievementsClient:
     def __init__(self, user, api_key):
@@ -22,7 +25,7 @@ class RetroachievementsClient:
             return Achievement(
                 cheevo['ID'],
                 cheevo['Title'],
-                cheevo['DateEarned']
+                int(datetime.strptime(cheevo['DateEarned'], RA_DATETIME_FORMAT).replace(tzinfo=timezone.utc).timestamp())
             )
 
         def achievements_parser(response) -> List[Achievement]:
